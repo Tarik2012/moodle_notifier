@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Asignar curso{% endblock %}
+{% block page_title %}Asignar curso{% endblock %}
+{% block page_subtitle %}Selecciona un curso para este alumno{% endblock %}
+
+{% block content %}
+
+<div class="max-w-lg mx-auto text-sm space-y-6">
+
+  <!-- INFO DEL ALUMNO -->
+  <div class="p-4 bg-gray-50 rounded-lg border text-xs">
+    <p class="text-gray-500">Alumno</p>
+    <p class="font-semibold">{{ student.first_name }} {{ student.last_name }}</p>
+
+    <p class="text-gray-500 mt-3">Usuario Moodle</p>
+    <p class="font-semibold text-green-700">ID {{ student.moodle_user_id }}</p>
+  </div>
+
+  <!-- FORMULARIO -->
+  <form method="POST" class="space-y-4">
+    {% csrf_token %}
+
+    <div>
+      <label class="text-xs text-gray-600">Curso</label>
+      <select name="course_id"
+              class="w-full mt-1 px-3 py-2 border rounded-lg text-xs">
+        <option value="">Selecciona un curso…</option>
+        {% for course in courses %}
+          <option value="{{ course.id }}">
+            {{ course.reference_code }} — {{ course.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- BOTONES -->
+    <div class="flex gap-3 pt-2">
+      <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 text-xs"
+              type="submit">
+        Asignar curso
+      </button>
+
+      <a href="{% url 'student_detail' student.id %}"
+         class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs">
+        Cancelar
+      </a>
+    </div>
+
+  </form>
+
+</div>
+
+{% endblock %}

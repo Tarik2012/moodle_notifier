@@ -1,0 +1,42 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# === Virtual environments ===
+venv/
+env/
+.idea/
+.vscode/
+
+# === Django ===
+*.log
+*.pot
+*.pyc
+*.sqlite3
+db.sqlite3
+/staticfiles/
+/media/
+/static/
+
+# === Environment variables ===
+.env
+*.env
+
+# === Byte-compiled / cache ===
+*.egg-info/
+*.egg
+.eggs/
+
+# === System ===
+.DS_Store
+Thumbs.db
+
+# === Compiled ===
+*.mo
+
+# === Docker ===
+/dist/
+*.pid

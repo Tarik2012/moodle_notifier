@@ -1,0 +1,213 @@
+# core/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+
+from .models import Student, Course, Enrollment
+from .forms import StudentForm
+from django.core.paginator import Paginator
+
+# Moodle API
+from moodle_app.api import create_user, enroll_user
+
+
+# ============================================================
+# DASHBOARD
+# ============================================================
+def home_view(request):
+    student_count = Student.objects.count()
+    course_count = Course.objects.count()
+
+    context = {
+        "student_count": student_count,
+        "course_count": course_count,
+    }
+    return render(request, "home.html", context)
+
+
+# ============================================================
+# LISTA DE ALUMNOS
+# ============================================================
+
+
+def student_list_view(request):
+    # ==============================
+    # FILTRO POR ESTADO
+    # ==============================
+    estado = request.GET.get("estado")
+
+    students = Student.objects.all().order_by("-created_at")
+
+    if estado == "interno":
+        students = students.filter(moodle_user_id__isnull=True)
+
+    elif estado == "moodle":
+        students = students.filter(moodle_user_id__isnull=False, enrollment__isnull=True).distinct()
+
+    elif estado == "matriculado":
+        students = students.filter(enrollment__isnull=False).distinct()
+
+    # ==============================
+    # PAGINACIÓN
+    # ==============================
+    paginator = Paginator(students, 10)  # 10 por página
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "core/student_list.html", {
+        "page_obj": page_obj,
+        "students": page_obj.object_list,
+        "estado": estado,
+    })
+
+
+
+# ============================================================
+# CREAR ALUMNO
+# ============================================================
+def create_student_view(request):
+    if request.method == "POST":
+        form = StudentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Alumno creado correctamente.")
+            return redirect("student_list")
+    else:
+        form = StudentForm()
+
+    return render(request, "core/create_student.html", {"form": form})
+
+
+# ============================================================
+# DETALLE DE ALUMNO
+# ============================================================
+def student_detail_view(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+    enrollments = Enrollment.objects.filter(student=student)
+
+    context = {
+        "student": student,
+        "enrollments": enrollments,
+    }
+    return render(request, "core/student_detail.html", context)
+
+
+
+# ============================================================
+# EDITAR ALUMNO
+# ============================================================
+def student_edit_view(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+
+    if request.method == "POST":
+        form = StudentForm(request.POST, instance=student)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Alumno actualizado correctamente.")
+            return redirect("student_detail", student_id=student.id)
+    else:
+        form = StudentForm(instance=student)
+
+    return render(request, "core/student_edit.html", {
+        "student": student,
+        "form": form,
+    })
+
+
+# ============================================================
+# ELIMINAR ALUMNO
+# ============================================================
+def student_delete_view(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+
+    if request.method == "POST":
+        student.delete()
+        messages.success(request, "Alumno eliminado correctamente.")
+        return redirect("student_list")
+
+    return render(request, "core/student_delete_confirm.html", {"student": student})
+
+
+# ============================================================
+# CREAR USUARIO EN MOODLE
+# ============================================================
+def student_create_moodle_user_view(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+
+    if student.moodle_user_id:
+        messages.warning(request, "Este alumno ya está creado en Moodle.")
+        return redirect("student_detail", student_id=student.id)
+
+    firstname = student.first_name
+    lastname = student.last_name
+    email = student.email
+    username = student.email
+    password = "TempPass123!"
+    phone = student.phone_number
+
+    try:
+        moodle_id = create_user(
+            firstname=firstname,
+            lastname=lastname,
+            email=email,
+            username=username,
+            password=password,
+            phone=phone
+        )
+
+        student.moodle_user_id = moodle_id
+        student.save()
+
+        messages.success(request, f"Usuario creado correctamente en Moodle (ID {moodle_id}).")
+
+    except Exception as e:
+        messages.error(request, f"Error creando usuario en Moodle: {e}")
+
+    return redirect("student_detail", student_id=student.id)
+
+
+# ============================================================
+# ASIGNAR CURSO A UN ALUMNO
+# ============================================================
+def student_assign_course_view(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+
+    if not student.moodle_user_id:
+        messages.error(request, "Este alumno aún no está creado en Moodle.")
+        return redirect("student_detail", student_id=student.id)
+
+    courses = Course.objects.all().order_by("name")
+
+    if request.method == "POST":
+        course_id = request.POST.get("course_id")
+
+        if not course_id:
+            messages.error(request, "Selecciona un curso.")
+            return redirect("student_assign_course", student_id=student.id)
+
+        course = get_object_or_404(Course, id=course_id)
+
+        # ¿Ya existe la matrícula?
+        if Enrollment.objects.filter(student=student, course=course).exists():
+            messages.warning(request, "Este alumno ya está asignado a este curso.")
+            return redirect("student_detail", student_id=student.id)
+
+        try:
+            # Matricular en Moodle
+            enroll_user(
+                user_id=student.moodle_user_id,
+                course_id=course.moodle_course_id
+            )
+
+            # Guardar matrícula en nuestra BD
+            Enrollment.objects.create(student=student, course=course)
+
+            messages.success(request, f"Alumno asignado al curso «{course.name}» correctamente.")
+            return redirect("student_detail", student_id=student.id)
+
+        except Exception as e:
+            messages.error(request, f"Error matriculando en Moodle: {e}")
+
+    return render(request, "core/student_assign_course.html", {
+        "student": student,
+        "courses": courses
+    })
