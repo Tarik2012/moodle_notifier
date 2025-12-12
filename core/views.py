@@ -76,10 +76,6 @@ def create_student_view(request):
 # ============================================================
 # DETALLE DE ALUMNO
 # ============================================================
-from moodle_app.services.moodle_progress import calculate_course_progress
-
-from django.shortcuts import get_object_or_404, render
-from .models import Student, Enrollment
 
 def student_detail_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
