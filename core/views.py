@@ -2,13 +2,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Count
+from django.db.models import Count, Q
 
 from .models import Student, Course, Enrollment
 from .forms import StudentForm
 
 # Moodle API
-from moodle_app.api import create_user, enroll_user
+from moodle_app.api import (
+    create_user,
+    enroll_user,
+    update_user,
+    delete_user,
+)
 
 
 # ============================================================
@@ -30,6 +35,7 @@ def home_view(request):
 # ============================================================
 def student_list_view(request):
     estado = request.GET.get("estado")
+    q = (request.GET.get("q") or "").strip()
 
     students = Student.objects.annotate(
         course_count=Count("enrollments", distinct=True)
@@ -44,6 +50,14 @@ def student_list_view(request):
     elif estado == "matriculado":
         students = students.filter(course_count__gt=0)
 
+    if q:
+        students = students.filter(
+            Q(email__icontains=q)
+            | Q(dni__icontains=q)
+            | Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+        )
+
     students = students.order_by("-created_at")
 
     paginator = Paginator(students, 10)  # 10 por página
@@ -54,6 +68,7 @@ def student_list_view(request):
         "page_obj": page_obj,
         "students": page_obj.object_list,
         "estado": estado,
+        "q": q,
     })
 
 
@@ -101,11 +116,42 @@ def student_detail_view(request, student_id):
 # ============================================================
 def student_edit_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
+    old_first_name = student.first_name
+    old_last_name = student.last_name
+    old_email = student.email
+    old_phone = student.phone_number
 
     if request.method == "POST":
         form = StudentForm(request.POST, instance=student)
         if form.is_valid():
-            form.save()
+            student = form.save()
+
+            if student.moodle_user_id:
+                changed_fields = {}
+
+                if old_first_name != student.first_name:
+                    changed_fields["firstname"] = student.first_name
+                if old_last_name != student.last_name:
+                    changed_fields["lastname"] = student.last_name
+                if old_email != student.email:
+                    changed_fields["email"] = student.email
+                    changed_fields["username"] = student.email
+                if old_phone != student.phone_number:
+                    changed_fields["phone"] = student.phone_number
+
+                if changed_fields:
+                    try:
+                        update_user(
+                            user_id=student.moodle_user_id,
+                            **changed_fields,
+                        )
+                    except Exception as e:
+                        messages.error(
+                            request,
+                            f"Datos guardados en la BD, pero fallo al actualizar en Moodle. Pendiente de sincronizar: {e}",
+                        )
+                        return redirect("student_detail", student_id=student.id)
+
             messages.success(request, "Alumno actualizado correctamente.")
             return redirect("student_detail", student_id=student.id)
     else:
@@ -124,6 +170,16 @@ def student_delete_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
     if request.method == "POST":
+        if student.moodle_user_id:
+            try:
+                delete_user(student.moodle_user_id)
+            except Exception as e:
+                messages.error(
+                    request,
+                    f"No se pudo borrar en Moodle. El alumno no se eliminó en la BD: {e}",
+                )
+                return redirect("student_detail", student_id=student.id)
+
         student.delete()
         messages.success(request, "Alumno eliminado correctamente.")
         return redirect("student_list")
@@ -179,7 +235,17 @@ def student_assign_course_view(request, student_id):
         messages.error(request, "Este alumno aún no está creado en Moodle.")
         return redirect("student_detail", student_id=student.id)
 
-    courses = Course.objects.all().order_by("name")
+    q = (request.GET.get("q") or "").strip()
+
+    courses = Course.objects.all()
+
+    if q:
+        courses = courses.filter(
+            Q(reference_code__icontains=q)
+            | Q(name__icontains=q)
+        )
+
+    courses = courses.order_by("name")
 
     if request.method == "POST":
         course_id = request.POST.get("course_id")
@@ -213,5 +279,6 @@ def student_assign_course_view(request, student_id):
 
     return render(request, "core/student_assign_course.html", {
         "student": student,
-        "courses": courses
+        "courses": courses,
+        "q": q,
     })

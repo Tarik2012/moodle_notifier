@@ -171,3 +171,64 @@ def calculate_course_progress(course_id, user_id):
 
     return sum(results) / len(results) if results else 0
 
+
+# ============================================================
+# 9) ACTUALIZAR USUARIO
+# ============================================================
+
+def update_user(
+    user_id,
+    firstname=None,
+    lastname=None,
+    email=None,
+    username=None,
+    phone=None,
+    city=None,
+    address=None,
+    company=None,
+    dni=None,
+):
+    """
+    Actualiza datos de usuario en Moodle.
+    Nota: Moodle no actualiza city/address/company/dni por defecto; se guardan solo en la BD local.
+    """
+    params = {
+        "users[0][id]": user_id,
+    }
+
+    if firstname is not None:
+        params["users[0][firstname]"] = firstname
+    if lastname is not None:
+        params["users[0][lastname]"] = lastname
+    if email is not None:
+        params["users[0][email]"] = email
+    # En este proyecto username = email; si cambia el email, actualizamos el username.
+    username_to_use = username if username is not None else email
+    if username_to_use is not None:
+        params["users[0][username]"] = username_to_use
+    if phone is not None:
+        params["users[0][phone1]"] = phone
+
+    res = call("core_user_update_users", params, method="POST")
+
+    if isinstance(res, dict) and res.get("exception"):
+        raise Exception(f"Error actualizando usuario: {res}")
+
+    return True
+
+
+# ============================================================
+# 10) BORRAR USUARIO
+# ============================================================
+
+def delete_user(user_id):
+    """
+    Borra un usuario en Moodle.
+    """
+    params = {"userids[0]": user_id}
+    res = call("core_user_delete_users", params, method="POST")
+
+    if isinstance(res, dict) and res.get("exception"):
+        raise Exception(f"Error borrando usuario: {res}")
+
+    return True

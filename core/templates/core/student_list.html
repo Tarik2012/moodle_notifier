@@ -19,27 +19,52 @@
 <!-- FILTROS -->
 <div class="flex items-center gap-3 mb-5">
 
-  <a href="{% url 'student_list' %}"
+  <a href="{% url 'student_list' %}{% if q %}?q={{ q }}{% endif %}"
      class="px-3 py-1 text-xs rounded-lg border {% if not estado %}bg-gray-900 text-white{% else %}bg-white text-gray-700{% endif %}">
     Todos
   </a>
 
-  <a href="?estado=interno"
+  <a href="?estado=interno{% if q %}&q={{ q }}{% endif %}"
      class="px-3 py-1 text-xs rounded-lg border {% if estado == 'interno' %}bg-yellow-500 text-white{% else %}bg-white text-gray-700{% endif %}">
     Interno
   </a>
 
-  <a href="?estado=moodle"
+  <a href="?estado=moodle{% if q %}&q={{ q }}{% endif %}"
      class="px-3 py-1 text-xs rounded-lg border {% if estado == 'moodle' %}bg-green-500 text-white{% else %}bg-white text-gray-700{% endif %}">
     Moodle creado
   </a>
 
-  <a href="?estado=matriculado"
+  <a href="?estado=matriculado{% if q %}&q={{ q }}{% endif %}"
      class="px-3 py-1 text-xs rounded-lg border {% if estado == 'matriculado' %}bg-blue-500 text-white{% else %}bg-white text-gray-700{% endif %}">
     Matriculados
   </a>
 
 </div>
+
+<!-- BUSCADOR -->
+<form method="get" class="mb-5 flex flex-col md:flex-row items-start md:items-center gap-3">
+  {% if estado %}
+    <input type="hidden" name="estado" value="{{ estado }}">
+  {% endif %}
+  <input
+    type="text"
+    name="q"
+    value="{{ q }}"
+    placeholder="Buscar por nombre, email o DNI"
+    class="w-full md:w-80 rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+  />
+  <div class="flex gap-2">
+    <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition">
+      Buscar
+    </button>
+    {% if q %}
+      <a href="{% url 'student_list' %}{% if estado %}?estado={{ estado }}{% endif %}"
+         class="px-4 py-2 text-xs font-semibold rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition">
+        Limpiar
+      </a>
+    {% endif %}
+  </div>
+</form>
 
 
 <!-- TABLA -->
@@ -110,6 +135,10 @@
         <td class="px-5 py-3 text-right space-x-3">
           <a href="{% url 'student_detail' student.id %}" class="text-blue-600 hover:underline">Ver</a>
           <a href="{% url 'student_edit' student.id %}" class="text-gray-700 hover:underline">Editar</a>
+          <a href="{% url 'student_delete' student.id %}"
+             class="inline-block px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition">
+            Eliminar
+          </a>
         </td>
 
       </tr>
@@ -130,7 +159,7 @@
 <div class="flex justify-center items-center mt-6 gap-2">
 
   {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}{% if estado %}&estado={{ estado }}{% endif %}"
+    <a href="?page={{ page_obj.previous_page_number }}{% if estado %}&estado={{ estado }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
        class="px-3 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300">Anterior</a>
   {% endif %}
 
@@ -139,7 +168,7 @@
   </span>
 
   {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}{% if estado %}&estado={{ estado }}{% endif %}"
+    <a href="?page={{ page_obj.next_page_number }}{% if estado %}&estado={{ estado }}{% endif %}{% if q %}&q={{ q }}{% endif %}"
        class="px-3 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300">Siguiente</a>
   {% endif %}
 
