@@ -26,12 +26,18 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
-    # ================================
-    # NUEVA PROPIEDAD
-    # ================================
     @property
     def course_count(self):
-        return self.enrollment_set.count()
+        # If the queryset annotated this instance, use the prefetched value
+        if hasattr(self, "_course_count"):
+            return self._course_count
+        # Fallback to counting related enrollments
+        return self.enrollments.count()
+
+    @course_count.setter
+    def course_count(self, value):
+        # Allow annotations to set this attribute without raising
+        self._course_count = value
 
 
 
@@ -57,14 +63,17 @@ class Course(models.Model):
 # ENROLLMENT
 # =====================================================
 class Enrollment(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="enrollments")
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
+
+    progress = models.FloatField(default=0.0)   # <────── NUEVO
 
     class Meta:
         unique_together = ('student', 'course')
 
     def __str__(self):
         return f"{self.student} → {self.course}"
+
 
 
 # =====================================================

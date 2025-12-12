@@ -1,10 +1,11 @@
 # core/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Count
 
 from .models import Student, Course, Enrollment
 from .forms import StudentForm
-from django.core.paginator import Paginator
 
 # Moodle API
 from moodle_app.api import create_user, enroll_user
@@ -27,28 +28,24 @@ def home_view(request):
 # ============================================================
 # LISTA DE ALUMNOS
 # ============================================================
-
-
 def student_list_view(request):
-    # ==============================
-    # FILTRO POR ESTADO
-    # ==============================
     estado = request.GET.get("estado")
 
-    students = Student.objects.all().order_by("-created_at")
+    students = Student.objects.annotate(
+        course_count=Count("enrollments", distinct=True)
+    )
 
     if estado == "interno":
         students = students.filter(moodle_user_id__isnull=True)
 
     elif estado == "moodle":
-        students = students.filter(moodle_user_id__isnull=False, enrollment__isnull=True).distinct()
+        students = students.filter(moodle_user_id__isnull=False, course_count=0)
 
     elif estado == "matriculado":
-        students = students.filter(enrollment__isnull=False).distinct()
+        students = students.filter(course_count__gt=0)
 
-    # ==============================
-    # PAGINACIÓN
-    # ==============================
+    students = students.order_by("-created_at")
+
     paginator = Paginator(students, 10)  # 10 por página
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -58,7 +55,6 @@ def student_list_view(request):
         "students": page_obj.object_list,
         "estado": estado,
     })
-
 
 
 # ============================================================
@@ -80,15 +76,27 @@ def create_student_view(request):
 # ============================================================
 # DETALLE DE ALUMNO
 # ============================================================
+from moodle_app.services.moodle_progress import calculate_course_progress
+
+from django.shortcuts import get_object_or_404, render
+from .models import Student, Enrollment
+
 def student_detail_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
-    enrollments = Enrollment.objects.filter(student=student)
+
+    enrollments = (
+        Enrollment.objects
+        .filter(student=student)
+        .select_related("course")
+    )
 
     context = {
         "student": student,
         "enrollments": enrollments,
     }
+
     return render(request, "core/student_detail.html", context)
+
 
 
 

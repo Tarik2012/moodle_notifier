@@ -108,7 +108,17 @@
               {{ enr.id|date:"d/m/Y H:i" }}
             </td>
             <td class="px-4 py-2">
-              <span class="px-2 py-1 text-xs rounded-md bg-blue-100 text-blue-700">0%</span>
+
+              {% if enr.progress %}
+                <span class="px-2 py-1 text-xs rounded-md bg-blue-100 text-blue-700">
+                  {{ enr.progress }}%
+                </span>
+              {% else %}
+                <span class="px-2 py-1 text-xs rounded-md bg-gray-200 text-gray-600">
+                  0%
+                </span>
+              {% endif %}
+
             </td>
           </tr>
           {% endfor %}
