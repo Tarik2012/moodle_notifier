@@ -115,3 +115,19 @@ class MessageLog(models.Model):
 
     def __str__(self):
         return f"{self.template_name} → {self.student} at {self.sent_at}"
+
+
+# =====================================================
+# EXTERNAL SYNC LOG (Moodle, etc.)
+# =====================================================
+class ExternalSyncLog(models.Model):
+    service = models.CharField(max_length=50)
+    action = models.CharField(max_length=100)
+    entity_type = models.CharField(max_length=100)
+    entity_id = models.IntegerField(null=True, blank=True)
+    status = models.CharField(max_length=20)
+    message = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.service} - {self.action} - {self.status}"

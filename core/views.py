@@ -79,9 +79,24 @@ def create_student_view(request):
     if request.method == "POST":
         form = StudentForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Alumno creado correctamente.")
-            return redirect("student_list")
+            student = form.save(commit=False)
+            password = form.cleaned_data.get("password")
+
+            try:
+                moodle_id = create_user(
+                    firstname=student.first_name,
+                    lastname=student.last_name,
+                    email=student.email,
+                    username=student.email,
+                    password=password,
+                    phone=student.phone_number,
+                )
+                student.moodle_user_id = moodle_id
+                student.save()
+                messages.success(request, "Alumno creado correctamente.")
+                return redirect("student_list")
+            except Exception as e:
+                form.add_error(None, f"Error creando usuario en Moodle: {e}")
     else:
         form = StudentForm()
 
@@ -197,30 +212,10 @@ def student_create_moodle_user_view(request, student_id):
         messages.warning(request, "Este alumno ya está creado en Moodle.")
         return redirect("student_detail", student_id=student.id)
 
-    firstname = student.first_name
-    lastname = student.last_name
-    email = student.email
-    username = student.email
-    password = "TempPass123!"
-    phone = student.phone_number
-
-    try:
-        moodle_id = create_user(
-            firstname=firstname,
-            lastname=lastname,
-            email=email,
-            username=username,
-            password=password,
-            phone=phone
-        )
-
-        student.moodle_user_id = moodle_id
-        student.save()
-
-        messages.success(request, f"Usuario creado correctamente en Moodle (ID {moodle_id}).")
-
-    except Exception as e:
-        messages.error(request, f"Error creando usuario en Moodle: {e}")
+    messages.error(
+        request,
+        "La creacion del usuario en Moodle debe hacerse al crear el alumno con su contrasena.",
+    )
 
     return redirect("student_detail", student_id=student.id)
 

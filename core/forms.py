@@ -19,6 +19,17 @@ class StudentForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Only include password when creating a new student (not when editing).
+        if not self.instance or not self.instance.pk:
+            self.fields["password"] = forms.CharField(
+                label="Contrasena Moodle",
+                required=True,
+                min_length=8,
+                widget=forms.PasswordInput(),
+                help_text="Minimo 8 caracteres. No se guardara en la BD, solo se envia a Moodle.",
+            )
+
         base_classes = (
             "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 "
             "text-sm text-gray-900 placeholder:text-gray-400 "

@@ -1,6 +1,8 @@
 import requests
 from django.conf import settings
 
+from core.audit import log_external_sync
+
 
 # ============================================================
 # CONFIGURACIÓN MOODLE
@@ -59,10 +61,39 @@ def create_user(firstname, lastname, email, username, password, phone=None):
     if phone:
         params["users[0][phone1]"] = phone
 
-    res = call("core_user_create_users", params, method="POST")
+    try:
+        res = call("core_user_create_users", params, method="POST")
 
-    if isinstance(res, list) and len(res) > 0:
-        return res[0]["id"]
+        if isinstance(res, list) and len(res) > 0:
+            user_id = res[0]["id"]
+            log_external_sync(
+                service="moodle",
+                action="create_user",
+                entity_type="student",
+                entity_id=user_id,
+                status="success",
+            )
+            return user_id
+
+        error_message = f"Error creando usuario: {res}"
+        log_external_sync(
+            service="moodle",
+            action="create_user",
+            entity_type="student",
+            entity_id=None,
+            status="error",
+            message=error_message,
+        )
+    except Exception as exc:
+        log_external_sync(
+            service="moodle",
+            action="create_user",
+            entity_type="student",
+            entity_id=None,
+            status="error",
+            message=str(exc),
+        )
+        raise
 
     raise Exception(f"Error creando usuario: {res}")
 
@@ -93,7 +124,39 @@ def enroll_user(user_id, course_id, role_id=5):
         "enrolments[0][courseid]": course_id,
     }
 
-    return call("enrol_manual_enrol_users", params, method="POST")
+    try:
+        res = call("enrol_manual_enrol_users", params, method="POST")
+    except Exception as exc:
+        log_external_sync(
+            service="moodle",
+            action="enroll_user",
+            entity_type="enrollment",
+            entity_id=user_id,
+            status="error",
+            message=str(exc),
+        )
+        raise
+
+    if isinstance(res, dict) and res.get("exception"):
+        log_external_sync(
+            service="moodle",
+            action="enroll_user",
+            entity_type="enrollment",
+            entity_id=user_id,
+            status="error",
+            message=f"{res}",
+        )
+    else:
+        log_external_sync(
+            service="moodle",
+            action="enroll_user",
+            entity_type="enrollment",
+            entity_id=user_id,
+            status="success",
+            message=f"course_id={course_id}",
+        )
+
+    return res
 
 
 # ============================================================
@@ -209,10 +272,38 @@ def update_user(
     if phone is not None:
         params["users[0][phone1]"] = phone
 
-    res = call("core_user_update_users", params, method="POST")
+    try:
+        res = call("core_user_update_users", params, method="POST")
+    except Exception as exc:
+        log_external_sync(
+            service="moodle",
+            action="update_user",
+            entity_type="student",
+            entity_id=user_id,
+            status="error",
+            message=str(exc),
+        )
+        raise
 
     if isinstance(res, dict) and res.get("exception"):
-        raise Exception(f"Error actualizando usuario: {res}")
+        error_message = f"Error actualizando usuario: {res}"
+        log_external_sync(
+            service="moodle",
+            action="update_user",
+            entity_type="student",
+            entity_id=user_id,
+            status="error",
+            message=error_message,
+        )
+        raise Exception(error_message)
+
+    log_external_sync(
+        service="moodle",
+        action="update_user",
+        entity_type="student",
+        entity_id=user_id,
+        status="success",
+    )
 
     return True
 
@@ -226,9 +317,37 @@ def delete_user(user_id):
     Borra un usuario en Moodle.
     """
     params = {"userids[0]": user_id}
-    res = call("core_user_delete_users", params, method="POST")
+    try:
+        res = call("core_user_delete_users", params, method="POST")
+    except Exception as exc:
+        log_external_sync(
+            service="moodle",
+            action="delete_user",
+            entity_type="student",
+            entity_id=user_id,
+            status="error",
+            message=str(exc),
+        )
+        raise
 
     if isinstance(res, dict) and res.get("exception"):
-        raise Exception(f"Error borrando usuario: {res}")
+        error_message = f"Error borrando usuario: {res}"
+        log_external_sync(
+            service="moodle",
+            action="delete_user",
+            entity_type="student",
+            entity_id=user_id,
+            status="error",
+            message=error_message,
+        )
+        raise Exception(error_message)
+
+    log_external_sync(
+        service="moodle",
+        action="delete_user",
+        entity_type="student",
+        entity_id=user_id,
+        status="success",
+    )
 
     return True
