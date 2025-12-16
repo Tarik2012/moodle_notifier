@@ -60,20 +60,24 @@ def student_list_view(request):
 
     students = students.order_by("-created_at")
 
-    paginator = Paginator(students, 10)  # 10 por página
+    paginator = Paginator(students, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    return render(request, "core/student_list.html", {
-        "page_obj": page_obj,
-        "students": page_obj.object_list,
-        "estado": estado,
-        "q": q,
-    })
+    return render(
+        request,
+        "core/student_list.html",
+        {
+            "page_obj": page_obj,
+            "students": page_obj.object_list,
+            "estado": estado,
+            "q": q,
+        },
+    )
 
 
 # ============================================================
-# CREAR ALUMNO
+# CREAR ALUMNO (CREA TAMBIÉN USUARIO EN MOODLE)
 # ============================================================
 def create_student_view(request):
     if request.method == "POST":
@@ -93,8 +97,10 @@ def create_student_view(request):
                 )
                 student.moodle_user_id = moodle_id
                 student.save()
+
                 messages.success(request, "Alumno creado correctamente.")
                 return redirect("student_list")
+
             except Exception as e:
                 form.add_error(None, f"Error creando usuario en Moodle: {e}")
     else:
@@ -106,7 +112,6 @@ def create_student_view(request):
 # ============================================================
 # DETALLE DE ALUMNO
 # ============================================================
-
 def student_detail_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
@@ -116,21 +121,22 @@ def student_detail_view(request, student_id):
         .select_related("course")
     )
 
-    context = {
-        "student": student,
-        "enrollments": enrollments,
-    }
-
-    return render(request, "core/student_detail.html", context)
-
-
+    return render(
+        request,
+        "core/student_detail.html",
+        {
+            "student": student,
+            "enrollments": enrollments,
+        },
+    )
 
 
 # ============================================================
-# EDITAR ALUMNO
+# EDITAR ALUMNO (SINCRONIZA CON MOODLE)
 # ============================================================
 def student_edit_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
+
     old_first_name = student.first_name
     old_last_name = student.last_name
     old_email = student.email
@@ -163,7 +169,8 @@ def student_edit_view(request, student_id):
                     except Exception as e:
                         messages.error(
                             request,
-                            f"Datos guardados en la BD, pero fallo al actualizar en Moodle. Pendiente de sincronizar: {e}",
+                            "Datos guardados en la BD, pero fallo al actualizar en Moodle. "
+                            f"Pendiente de sincronizar: {e}",
                         )
                         return redirect("student_detail", student_id=student.id)
 
@@ -172,14 +179,18 @@ def student_edit_view(request, student_id):
     else:
         form = StudentForm(instance=student)
 
-    return render(request, "core/student_edit.html", {
-        "student": student,
-        "form": form,
-    })
+    return render(
+        request,
+        "core/student_edit.html",
+        {
+            "student": student,
+            "form": form,
+        },
+    )
 
 
 # ============================================================
-# ELIMINAR ALUMNO
+# ELIMINAR ALUMNO (BORRA TAMBIÉN EN MOODLE)
 # ============================================================
 def student_delete_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
@@ -191,7 +202,8 @@ def student_delete_view(request, student_id):
             except Exception as e:
                 messages.error(
                     request,
-                    f"No se pudo borrar en Moodle. El alumno no se eliminó en la BD: {e}",
+                    "No se pudo borrar en Moodle. "
+                    f"El alumno no se eliminó en la BD: {e}",
                 )
                 return redirect("student_detail", student_id=student.id)
 
@@ -199,23 +211,27 @@ def student_delete_view(request, student_id):
         messages.success(request, "Alumno eliminado correctamente.")
         return redirect("student_list")
 
-    return render(request, "core/student_delete_confirm.html", {"student": student})
+    return render(
+        request,
+        "core/student_delete_confirm.html",
+        {"student": student},
+    )
 
 
 # ============================================================
-# CREAR USUARIO EN MOODLE
+# CREAR USUARIO EN MOODLE (VISTA DEFENSIVA)
 # ============================================================
 def student_create_moodle_user_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
     if student.moodle_user_id:
         messages.warning(request, "Este alumno ya está creado en Moodle.")
-        return redirect("student_detail", student_id=student.id)
-
-    messages.error(
-        request,
-        "La creacion del usuario en Moodle debe hacerse al crear el alumno con su contrasena.",
-    )
+    else:
+        messages.error(
+            request,
+            "La creación del usuario en Moodle debe hacerse al crear el alumno "
+            "con su contraseña.",
+        )
 
     return redirect("student_detail", student_id=student.id)
 
@@ -223,6 +239,9 @@ def student_create_moodle_user_view(request, student_id):
 # ============================================================
 # ASIGNAR CURSO A UN ALUMNO
 # ============================================================
+from whatsapp_app.services.welcome import send_welcome_message
+
+
 def student_assign_course_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
@@ -251,29 +270,45 @@ def student_assign_course_view(request, student_id):
 
         course = get_object_or_404(Course, id=course_id)
 
-        # ¿Ya existe la matrícula?
+        # Evitar duplicados
         if Enrollment.objects.filter(student=student, course=course).exists():
             messages.warning(request, "Este alumno ya está asignado a este curso.")
             return redirect("student_detail", student_id=student.id)
 
         try:
-            # Matricular en Moodle
+            # 1️⃣ Matricular en Moodle
             enroll_user(
                 user_id=student.moodle_user_id,
-                course_id=course.moodle_course_id
+                course_id=course.moodle_course_id,
             )
 
-            # Guardar matrícula en nuestra BD
-            Enrollment.objects.create(student=student, course=course)
+            # 2️⃣ Guardar matrícula en la BD
+            enrollment = Enrollment.objects.create(
+                student=student,
+                course=course,
+            )
 
-            messages.success(request, f"Alumno asignado al curso «{course.name}» correctamente.")
+            # 4️⃣ Enviar mensaje de bienvenida
+            send_welcome_message(
+                student=student,
+                enrollment=enrollment,
+            )
+
+            messages.success(
+                request,
+                f"Alumno asignado al curso «{course.name}» correctamente.",
+            )
             return redirect("student_detail", student_id=student.id)
 
         except Exception as e:
             messages.error(request, f"Error matriculando en Moodle: {e}")
 
-    return render(request, "core/student_assign_course.html", {
-        "student": student,
-        "courses": courses,
-        "q": q,
-    })
+    return render(
+        request,
+        "core/student_assign_course.html",
+        {
+            "student": student,
+            "courses": courses,
+            "q": q,
+        },
+    )

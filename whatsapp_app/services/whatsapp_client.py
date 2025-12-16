@@ -7,7 +7,7 @@ def send_template_message(
     phone_id: str,
     to_number: str,
     template_name: str,
-    language: str = "en",
+    language: str = "en_US",
     variables: list[str] | None = None,
 ):
     """
