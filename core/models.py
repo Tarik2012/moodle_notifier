@@ -92,30 +92,6 @@ class ProgressSnapshot(models.Model):
         return f"{self.student} - {self.course}: {self.overall_progress}%"
 
 
-# =====================================================
-# MENSAJES ENVIADOS (WhatsApp Log)
-# =====================================================
-class MessageLog(models.Model):
-
-    TEMPLATE_CHOICES = [
-        ('welcome', 'Welcome'),
-        ('progress', 'Progress'),
-        ('inactivity', 'Inactivity'),
-        ('completion', 'Completion'),
-    ]
-
-    student = models.ForeignKey(Student, on_delete=models.CASCADE)
-    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True)
-
-    template_name = models.CharField(max_length=50, choices=TEMPLATE_CHOICES)
-    sent_at = models.DateTimeField(auto_now_add=True)
-
-    # ID real del mensaje enviado por WhatsApp Cloud API
-    whatsapp_message_id = models.CharField(max_length=255, blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.template_name} → {self.student} at {self.sent_at}"
-
 
 # =====================================================
 # EXTERNAL SYNC LOG (Moodle, etc.)
