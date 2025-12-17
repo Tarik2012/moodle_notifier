@@ -1,10 +1,11 @@
 from celery import shared_task
 import os
+
 from whatsapp_app.services.whatsapp_client import send_template_message
 from whatsapp_app.models import MessageLog
 
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={"max_retries": 3, "countdown": 10})
+@shared_task(bind=True)
 def send_whatsapp_template_task(
     self,
     *,
@@ -13,6 +14,16 @@ def send_whatsapp_template_task(
     language: str = "en_US",
     variables: list[str] | None = None,
 ):
+    """
+    Envío de mensajes WhatsApp por plantilla.
+
+    Reglas IMPORTANTES:
+    - Un intento = un MessageLog
+    - NO autoretry (evita duplicados y comportamiento errático)
+    - Estado claro: PENDING -> SENT | FAILED
+    """
+
+    # 1️⃣ Crear log del intento
     log = MessageLog.objects.create(
         phone_number=to_number,
         template_name=template_name,
@@ -20,21 +31,45 @@ def send_whatsapp_template_task(
     )
 
     try:
-        status, response = send_template_message(
-            token=os.getenv("WHATSAPP_TOKEN"),
-            phone_id=os.getenv("WHATSAPP_PHONE_ID"),
+        # 2️⃣ Validación de entorno (falla rápido y claro)
+        token = os.getenv("WHATSAPP_TOKEN")
+        phone_id = os.getenv("WHATSAPP_PHONE_ID")
+
+        if not token or not phone_id:
+            log.status = MessageLog.Status.FAILED
+            log.save(update_fields=["status"])
+            return {
+                "error": "Missing WHATSAPP_TOKEN or WHATSAPP_PHONE_ID",
+            }
+
+        # 3️⃣ Llamada real a WhatsApp
+        status_code, response = send_template_message(
+            token=token,
+            phone_id=phone_id,
             to_number=to_number,
             template_name=template_name,
             language=language,
             variables=variables,
         )
 
-        log.status = MessageLog.Status.SENT if status == 200 else MessageLog.Status.FAILED
+        # 4️⃣ Guardar resultado
+        if status_code == 200:
+            log.status = MessageLog.Status.SENT
+        else:
+            log.status = MessageLog.Status.FAILED
+
         log.save(update_fields=["status"])
 
-        return status, response
+        return {
+            "status_code": status_code,
+            "response": response,
+        }
 
-    except Exception:
+    except Exception as exc:
+        # 5️⃣ Error controlado (sin retry automático)
         log.status = MessageLog.Status.FAILED
         log.save(update_fields=["status"])
-        raise
+
+        return {
+            "error": str(exc),
+        }
