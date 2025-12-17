@@ -1,0 +1,4 @@
+celery -A notifier_backend beat -l info
+docker start redis-moodle
+celery -A notifier_backend beat -l info
+celery -A notifier_backend worker -l info --pool=solo
