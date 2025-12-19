@@ -13,25 +13,33 @@ def send_whatsapp_template_task(
     template_name: str,
     language: str = "en_US",
     variables: list[str] | None = None,
+
+    # ⬇️ NUEVOS CAMPOS (OPCIONALES)
+    student_id: int | None = None,
+    course_id: int | None = None,
 ):
     """
     Envío de mensajes WhatsApp por plantilla.
 
     Reglas IMPORTANTES:
     - Un intento = un MessageLog
-    - NO autoretry (evita duplicados y comportamiento errático)
+    - NO autoretry
     - Estado claro: PENDING -> SENT | FAILED
     """
 
-    # 1️⃣ Crear log del intento
+    # 1️⃣ Crear log del intento (MISMA LÓGICA)
     log = MessageLog.objects.create(
         phone_number=to_number,
         template_name=template_name,
         status=MessageLog.Status.PENDING,
+
+        # ⬇️ NUEVO (NO OBLIGATORIO)
+        student_id=student_id,
+        course_id=course_id,
+        variables=variables or [],
     )
 
     try:
-        # 2️⃣ Validación de entorno (falla rápido y claro)
         token = os.getenv("WHATSAPP_TOKEN")
         phone_id = os.getenv("WHATSAPP_PHONE_ID")
 
@@ -42,7 +50,6 @@ def send_whatsapp_template_task(
                 "error": "Missing WHATSAPP_TOKEN or WHATSAPP_PHONE_ID",
             }
 
-        # 3️⃣ Llamada real a WhatsApp
         status_code, response = send_template_message(
             token=token,
             phone_id=phone_id,
@@ -52,12 +59,11 @@ def send_whatsapp_template_task(
             variables=variables,
         )
 
-        # 4️⃣ Guardar resultado
-        if status_code == 200:
-            log.status = MessageLog.Status.SENT
-        else:
-            log.status = MessageLog.Status.FAILED
-
+        log.status = (
+            MessageLog.Status.SENT
+            if status_code == 200
+            else MessageLog.Status.FAILED
+        )
         log.save(update_fields=["status"])
 
         return {
@@ -66,7 +72,6 @@ def send_whatsapp_template_task(
         }
 
     except Exception as exc:
-        # 5️⃣ Error controlado (sin retry automático)
         log.status = MessageLog.Status.FAILED
         log.save(update_fields=["status"])
 

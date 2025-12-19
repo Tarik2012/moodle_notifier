@@ -6,8 +6,8 @@ from whatsapp_app.tasks import send_whatsapp_template_task
 from whatsapp_app.models import MessageLog
 
 
-WELCOME_TEMPLATE = "jaspers_market_plain_text_v1"
-WELCOME_LANG = "en_US"
+WELCOME_TEMPLATE = "welcome_student_service_v1"
+WELCOME_LANG = "es"
 
 
 def send_welcome_message(*, student, enrollment) -> None:
@@ -18,26 +18,35 @@ def send_welcome_message(*, student, enrollment) -> None:
     - Evita duplicados básicos por plantilla + teléfono.
     """
 
-    # 1) Validación mínima
+    # 1️⃣ Validación mínima
     phone = getattr(student, "phone_number", None) or getattr(student, "phone", None)
     if not phone:
         return
 
-    # 2) Idempotencia básica (evitar re-envío accidental)
+    # 2️⃣ Idempotencia básica
     already_sent = MessageLog.objects.filter(
         phone_number=phone,
         template_name=WELCOME_TEMPLATE,
-        status="SENT",
+        status=MessageLog.Status.SENT,
     ).exists()
     if already_sent:
         return
 
-    # 3) Encolar task (SIN variables porque la plantilla no las acepta)
+    course = enrollment.course
+
+    # 3️⃣ Encolar task CON variables
     transaction.on_commit(
         lambda: send_whatsapp_template_task.delay(
             to_number=phone,
             template_name=WELCOME_TEMPLATE,
             language=WELCOME_LANG,
-            variables=None,   # 👈 CLAVE
+            variables=[
+                student.first_name,                             # {{1}}
+                course.name,                                    # {{2}}
+                course.start_date.strftime("%d/%m/%Y"),         # {{3}}
+                course.end_date.strftime("%d/%m/%Y"),           # {{4}}
+            ],
+            student_id=student.id,
+            course_id=course.id,
         )
     )
