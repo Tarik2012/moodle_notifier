@@ -54,8 +54,13 @@ class Course(models.Model):
     shortname = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
+    # ⬇️ NUEVO (NO rompe nada existente)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.reference_code} - {self.name}"
+
 
 
 

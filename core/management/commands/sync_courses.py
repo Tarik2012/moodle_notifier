@@ -1,7 +1,10 @@
 import requests
 import re
+from datetime import datetime
+
 from django.core.management.base import BaseCommand
 from django.conf import settings
+
 from core.models import Course
 
 
@@ -52,8 +55,23 @@ class Command(BaseCommand):
 
         for c in courses:
             reference = (
-                self.extract_reference(c.get("shortname")) or
-                self.extract_reference(c.get("fullname"))
+                self.extract_reference(c.get("shortname"))
+                or self.extract_reference(c.get("fullname"))
+            )
+
+            # ---------------------------------
+            # Convertir fechas desde Moodle
+            # ---------------------------------
+            start_date = (
+                datetime.fromtimestamp(c["startdate"]).date()
+                if c.get("startdate")
+                else None
+            )
+
+            end_date = (
+                datetime.fromtimestamp(c["enddate"]).date()
+                if c.get("enddate")
+                else None
             )
 
             obj, created = Course.objects.update_or_create(
@@ -62,8 +80,10 @@ class Command(BaseCommand):
                     "reference_code": reference,
                     "name": c["fullname"],
                     "shortname": c.get("shortname"),
-                    "description": c.get("summary", "")
-                }
+                    "description": c.get("summary", ""),
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
             )
 
             if created:
