@@ -14,7 +14,7 @@ def send_whatsapp_template_task(
     language: str = "en_US",
     variables: list[str] | None = None,
 
-    # ⬇️ NUEVOS CAMPOS (OPCIONALES)
+    # Campos de contexto (internos)
     student_id: int | None = None,
     course_id: int | None = None,
 ):
@@ -25,21 +25,33 @@ def send_whatsapp_template_task(
     - Un intento = un MessageLog
     - NO autoretry
     - Estado claro: PENDING -> SENT | FAILED
+    - Aisla fallos externos (WhatsApp)
     """
 
-    # 1️⃣ Crear log del intento (MISMA LÓGICA)
+    # --------------------------------------------------
+    # 0) Validación mínima de contexto (no rompe flujos)
+    # --------------------------------------------------
+    if student_id is None or course_id is None:
+        return {
+            "error": "student_id and course_id are required",
+        }
+
+    # --------------------------------------------------
+    # 1) Crear log del intento (fuente de verdad)
+    # --------------------------------------------------
     log = MessageLog.objects.create(
         phone_number=to_number,
         template_name=template_name,
         status=MessageLog.Status.PENDING,
-
-        # ⬇️ NUEVO (NO OBLIGATORIO)
         student_id=student_id,
         course_id=course_id,
         variables=variables or [],
     )
 
     try:
+        # --------------------------------------------------
+        # 2) Cargar credenciales
+        # --------------------------------------------------
         token = os.getenv("WHATSAPP_TOKEN")
         phone_id = os.getenv("WHATSAPP_PHONE_ID")
 
@@ -50,6 +62,9 @@ def send_whatsapp_template_task(
                 "error": "Missing WHATSAPP_TOKEN or WHATSAPP_PHONE_ID",
             }
 
+        # --------------------------------------------------
+        # 3) Llamada a WhatsApp Cloud API
+        # --------------------------------------------------
         status_code, response = send_template_message(
             token=token,
             phone_id=phone_id,
@@ -59,6 +74,9 @@ def send_whatsapp_template_task(
             variables=variables,
         )
 
+        # --------------------------------------------------
+        # 4) Actualizar estado final
+        # --------------------------------------------------
         log.status = (
             MessageLog.Status.SENT
             if status_code == 200
@@ -72,6 +90,9 @@ def send_whatsapp_template_task(
         }
 
     except Exception as exc:
+        # --------------------------------------------------
+        # 5) Fallo controlado (sin retry automático)
+        # --------------------------------------------------
         log.status = MessageLog.Status.FAILED
         log.save(update_fields=["status"])
 
