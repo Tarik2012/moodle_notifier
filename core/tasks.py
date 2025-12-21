@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-
 from celery import shared_task
 from django.db.models import Q
 from django.utils import timezone
@@ -18,92 +17,95 @@ from whatsapp_app.tasks import send_whatsapp_template_task
 LANG_ES = "es"
 PROGRESS_DEDUPLICATION_DAYS = 2
 
-
-# =====================================================
-# REGLA 2 – MENSAJES DE SEGUIMIENTO
-# =====================================================
-
 PROGRESS_TEMPLATE = "progress_student_service_v1"
+REVIEW_TEMPLATE = "review_student_service_v1"
+COMPLETION_TEMPLATE = "completion_student_service_v1"
 
 
-@shared_task(bind=True)
-def send_progress_messages(self) -> None:
-    """
-    REGLA 2 – MENSAJES DE SEGUIMIENTO
+# =====================================================
+# REGLA 2 – PROGRESO
+# =====================================================
 
-    - Progreso entre 1% y 99%
-    - Alumno con teléfono
-    - Dedupe: alumno + curso + plantilla
-    - Ventana: 2 días
-    """
-
+@shared_task
+def dispatch_progress_messages() -> None:
     now = timezone.now()
     dedup_from = now - timedelta(days=PROGRESS_DEDUPLICATION_DAYS)
 
-    enrollments = (
+    enrollment_ids = (
         Enrollment.objects
-        .select_related("student", "course")
         .filter(progress__gt=0, progress__lt=100)
         .exclude(
             Q(student__phone_number__isnull=True) |
             Q(student__phone_number="")
         )
+        .values_list("id", flat=True)
     )
 
-    for enr in enrollments:
-        student = enr.student
-        course = enr.course
-        progress = round(enr.progress, 2)
-
-        already_sent = MessageLog.objects.filter(
-            student=student,
-            course=course,
-            template_name=PROGRESS_TEMPLATE,
-            created_at__gte=dedup_from,
-            status=MessageLog.Status.SENT,
-        ).exists()
-
-        if already_sent:
-            continue
-
-        send_whatsapp_template_task.delay(
-            to_number=student.phone_number,
-            template_name=PROGRESS_TEMPLATE,
-            language=LANG_ES,
-            variables=[
-                student.first_name,   # {{1}}
-                course.name,          # {{2}}
-                str(progress),        # {{3}}
-            ],
-            student_id=student.id,
-            course_id=course.id,
+    for enrollment_id in enrollment_ids:
+        send_progress_message_for_enrollment.delay(
+            enrollment_id=enrollment_id,
+            dedup_from_iso=dedup_from.isoformat(),
         )
 
 
-# =====================================================
-# REGLA 3 – MODO REPASO (DÍA ANTES DE FINALIZAR)
-# =====================================================
-
-REVIEW_TEMPLATE = "review_student_service_v1"
-
-
 @shared_task(bind=True)
-def send_review_messages(self) -> None:
-    """
-    REGLA 3 – MODO REPASO
+def send_progress_message_for_enrollment(
+    self,
+    *,
+    enrollment_id: int,
+    dedup_from_iso: str,
+) -> None:
+    dedup_from = timezone.datetime.fromisoformat(dedup_from_iso)
 
-    - Curso finaliza mañana
-    - Progreso >= 100%
-    - Alumno con teléfono
-    - Un solo mensaje
-    """
+    enr = (
+        Enrollment.objects
+        .select_related("student", "course")
+        .get(id=enrollment_id)
+    )
 
+    student = enr.student
+    course = enr.course
+    progress = round(enr.progress, 2)
+
+    already_sent = MessageLog.objects.filter(
+        student=student,
+        course=course,
+        template_name=PROGRESS_TEMPLATE,
+        created_at__gte=dedup_from,
+        status__in=[
+            MessageLog.Status.PENDING,
+            MessageLog.Status.SENT,
+        ],
+    ).exists()
+
+    if already_sent:
+        return
+
+    send_whatsapp_template_task.delay(
+        to_number=student.phone_number,
+        template_name=PROGRESS_TEMPLATE,
+        language=LANG_ES,
+        variables=[
+            student.first_name,
+            course.name,
+            str(progress),
+        ],
+        student_id=student.id,
+        course_id=course.id,
+    )
+
+
+# =====================================================
+# REGLA 3 – REPASO (DÍA ANTES)
+# =====================================================
+
+@shared_task
+def dispatch_review_messages() -> None:
     today = timezone.now().date()
     tomorrow = today + timedelta(days=1)
 
-    enrollments = (
+    enrollment_ids = (
         Enrollment.objects
-        .select_related("student", "course")
         .filter(
             progress__gte=100,
             course__end_date=tomorrow,
@@ -113,58 +115,64 @@ def send_review_messages(self) -> None:
             Q(student__phone_number__isnull=True) |
             Q(student__phone_number="")
         )
+        .values_list("id", flat=True)
     )
 
-    for enr in enrollments:
-        student = enr.student
-        course = enr.course
-
-        already_sent = MessageLog.objects.filter(
-            student=student,
-            course=course,
-            template_name=REVIEW_TEMPLATE,
-            status=MessageLog.Status.SENT,
-        ).exists()
-
-        if already_sent:
-            continue
-
-        send_whatsapp_template_task.delay(
-            to_number=student.phone_number,
-            template_name=REVIEW_TEMPLATE,
-            language=LANG_ES,
-            variables=[
-                student.first_name,  # {{1}}
-                course.name,         # {{2}}
-            ],
-            student_id=student.id,
-            course_id=course.id,
-        )
-
-
-# =====================================================
-# REGLA 4 – FINALIZACIÓN DE CURSO
-# =====================================================
-
-COMPLETION_TEMPLATE = "completion_student_service_v1"
+    for enrollment_id in enrollment_ids:
+        send_review_message_for_enrollment.delay(enrollment_id=enrollment_id)
 
 
 @shared_task(bind=True)
-def send_completion_messages(self) -> None:
-    """
-    REGLA 4 – FINALIZACIÓN DE CURSO
-
-    - Curso finaliza hoy
-    - Progreso >= 100%
-    - Alumno con teléfono
-    - Un solo mensaje
-    """
-
-    today = timezone.now().date()
-
-    enrollments = (
+def send_review_message_for_enrollment(
+    self,
+    *,
+    enrollment_id: int,
+) -> None:
+    enr = (
         Enrollment.objects
         .select_related("student", "course")
+        .get(id=enrollment_id)
+    )
+
+    student = enr.student
+    course = enr.course
+
+    already_sent = MessageLog.objects.filter(
+        student=student,
+        course=course,
+        template_name=REVIEW_TEMPLATE,
+        status__in=[
+            MessageLog.Status.PENDING,
+            MessageLog.Status.SENT,
+        ],
+    ).exists()
+
+    if already_sent:
+        return
+
+    send_whatsapp_template_task.delay(
+        to_number=student.phone_number,
+        template_name=REVIEW_TEMPLATE,
+        language=LANG_ES,
+        variables=[
+            student.first_name,
+            course.name,
+        ],
+        student_id=student.id,
+        course_id=course.id,
+    )
+
+
+# =====================================================
+# REGLA 4 – FINALIZACIÓN
+# =====================================================
+
+@shared_task
+def dispatch_completion_messages() -> None:
+    today = timezone.now().date()
+
+    enrollment_ids = (
+        Enrollment.objects
         .filter(
             progress__gte=100,
             course__end_date=today,
@@ -174,32 +182,51 @@ def send_completion_messages(self) -> None:
             Q(student__phone_number__isnull=True) |
             Q(student__phone_number="")
         )
+        .values_list("id", flat=True)
     )
 
-    for enr in enrollments:
-        student = enr.student
-        course = enr.course
-        progress = round(enr.progress, 2)
+    for enrollment_id in enrollment_ids:
+        send_completion_message_for_enrollment.delay(enrollment_id=enrollment_id)
 
-        already_sent = MessageLog.objects.filter(
-            student=student,
-            course=course,
-            template_name=COMPLETION_TEMPLATE,
-            status=MessageLog.Status.SENT,
-        ).exists()
 
-        if already_sent:
-            continue
+@shared_task(bind=True)
+def send_completion_message_for_enrollment(
+    self,
+    *,
+    enrollment_id: int,
+) -> None:
+    enr = (
+        Enrollment.objects
+        .select_related("student", "course")
+        .get(id=enrollment_id)
+    )
 
-        send_whatsapp_template_task.delay(
-            to_number=student.phone_number,
-            template_name=COMPLETION_TEMPLATE,
-            language=LANG_ES,
-            variables=[
-                student.first_name,  # {{1}}
-                course.name,         # {{2}}
-                str(progress),       # {{3}}
-            ],
-            student_id=student.id,
-            course_id=course.id,
-        )
+    student = enr.student
+    course = enr.course
+    progress = round(enr.progress, 2)
+
+    already_sent = MessageLog.objects.filter(
+        student=student,
+        course=course,
+        template_name=COMPLETION_TEMPLATE,
+        status__in=[
+            MessageLog.Status.PENDING,
+            MessageLog.Status.SENT,
+        ],
+    ).exists()
+
+    if already_sent:
+        return
+
+    send_whatsapp_template_task.delay(
+        to_number=student.phone_number,
+        template_name=COMPLETION_TEMPLATE,
+        language=LANG_ES,
+        variables=[
+            student.first_name,
+            course.name,
+            str(progress),
+        ],
+        student_id=student.id,
+        course_id=course.id,
+    )
