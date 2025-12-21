@@ -7,6 +7,7 @@ from django.db.models import Count, Q
 from .models import Student, Course, Enrollment
 from .forms import StudentForm
 
+
 # Moodle API
 from moodle_app.api import (
     create_user,
@@ -312,3 +313,20 @@ def student_assign_course_view(request, student_id):
             "q": q,
         },
     )
+
+
+
+
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.shortcuts import redirect
+
+
+@require_POST
+def sync_courses_view(request):
+    from core.tasks import sync_courses_task  # import local (evita ImportError en arranque)
+
+    sync_courses_task.delay()
+    messages.success(request, "Sincronización de cursos desde Moodle lanzada correctamente.")
+    return redirect("home")
+

@@ -239,3 +239,14 @@ def send_completion_message_for_enrollment(
         student_id=student.id,
         course_id=course.id,
     )
+
+
+# core/tasks.py
+from celery import shared_task
+from django.core.management import call_command
+
+
+@shared_task(bind=True)
+def sync_courses_task(self):
+    call_command("sync_courses")
+

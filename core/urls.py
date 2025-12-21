@@ -12,6 +12,10 @@ urlpatterns = [
     # ============================
     path("", core_views.home_view, name="home"),
 
+    path("courses/sync/", core_views.sync_courses_view, name="sync_courses"),
+
+
+
     # ============================
     # AUTH
     # ============================
