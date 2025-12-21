@@ -57,11 +57,14 @@ def send_progress_message_for_enrollment(
 ) -> None:
     dedup_from = timezone.datetime.fromisoformat(dedup_from_iso)
 
-    enr = (
-        Enrollment.objects
-        .select_related("student", "course")
-        .get(id=enrollment_id)
-    )
+    try:
+        enr = (
+            Enrollment.objects
+            .select_related("student", "course")
+            .get(id=enrollment_id)
+        )
+    except Enrollment.DoesNotExist:
+        return
 
     student = enr.student
     course = enr.course
@@ -128,11 +131,14 @@ def send_review_message_for_enrollment(
     *,
     enrollment_id: int,
 ) -> None:
-    enr = (
-        Enrollment.objects
-        .select_related("student", "course")
-        .get(id=enrollment_id)
-    )
+    try:
+        enr = (
+            Enrollment.objects
+            .select_related("student", "course")
+            .get(id=enrollment_id)
+        )
+    except Enrollment.DoesNotExist:
+        return
 
     student = enr.student
     course = enr.course
@@ -195,11 +201,14 @@ def send_completion_message_for_enrollment(
     *,
     enrollment_id: int,
 ) -> None:
-    enr = (
-        Enrollment.objects
-        .select_related("student", "course")
-        .get(id=enrollment_id)
-    )
+    try:
+        enr = (
+            Enrollment.objects
+            .select_related("student", "course")
+            .get(id=enrollment_id)
+        )
+    except Enrollment.DoesNotExist:
+        return
 
     student = enr.student
     course = enr.course

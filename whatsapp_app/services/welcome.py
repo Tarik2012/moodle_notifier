@@ -17,7 +17,7 @@ def send_welcome_message(*, student, enrollment) -> None:
     - Se ejecuta al crear la matrícula
     - No hace llamadas externas directas
     - Usa Celery
-    - Evita duplicados básicos
+    - Evita duplicados
     """
 
     # --------------------------------------------------
@@ -30,14 +30,17 @@ def send_welcome_message(*, student, enrollment) -> None:
     course = enrollment.course
 
     # --------------------------------------------------
-    # 2) Idempotencia básica (welcome = 1 vez por curso)
+    # 2) Idempotencia (PENDING + SENT)
     # --------------------------------------------------
     already_sent = MessageLog.objects.filter(
         phone_number=phone,
         template_name=WELCOME_TEMPLATE,
         student_id=student.id,
         course_id=course.id,
-        status=MessageLog.Status.SENT,
+        status__in=[
+            MessageLog.Status.PENDING,
+            MessageLog.Status.SENT,
+        ],
     ).exists()
 
     if already_sent:
