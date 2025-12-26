@@ -21,7 +21,18 @@ Registra un nuevo alumno en la base interna para poder vincularlo con Moodle y a
             {% endif %}
           </label>
 
-          {{ field }}
+          {% if field.name == "password" %}
+            <div class="relative">
+              {{ field }}
+              <button type="button"
+                      onclick="togglePassword('{{ field.id_for_label }}')"
+                      class="absolute right-2 top-2 text-xs text-gray-500 select-none">
+                👁️
+              </button>
+            </div>
+          {% else %}
+            {{ field }}
+          {% endif %}
 
           {% if field.help_text %}
             <p class="mt-1 text-[11px] text-gray-400">{{ field.help_text }}</p>
@@ -45,4 +56,11 @@ Registra un nuevo alumno en la base interna para poder vincularlo con Moodle y a
       </button>
     </div>
   </form>
+
+  <script>
+    function togglePassword(fieldId) {
+      const input = document.getElementById(fieldId);
+      input.type = input.type === "password" ? "text" : "password";
+    }
+  </script>
 {% endblock %}

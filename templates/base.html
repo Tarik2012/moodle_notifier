@@ -5,7 +5,7 @@
     <title>{% block title %}Moodle Notifier{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Tailwind CSS -->
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
 
@@ -15,7 +15,7 @@
     <header class="w-full bg-white border-b border-gray-200 shadow-sm">
       <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
 
-        <!-- LEFT: LOGO -->
+        <!-- LOGO -->
         <div class="flex items-center gap-3">
           <div class="h-8 w-8 rounded-md bg-gray-900 text-white flex items-center justify-center text-[11px] font-semibold">
             MN
@@ -26,64 +26,76 @@
           </div>
         </div>
 
-        <!-- CENTER NAV -->
-        <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
+        <!-- NAV -->
+        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
 
-          <a href="{% url 'home' %}" class="hover:text-gray-900 transition">Dashboard</a>
-          <a href="#" class="hover:text-gray-900 transition">Cursos</a>
+          <!-- Dashboard -->
+          <a href="{% url 'home' %}"
+             class="{% if request.path == '/' %}text-gray-900 font-semibold{% else %}text-gray-500 hover:text-gray-900{% endif %}">
+            Dashboard
+          </a>
 
-          <!-- FIX: Alumnos ahora va al LISTADO, no al formulario -->
-          <a href="{% url 'student_list' %}" class="hover:text-gray-900 transition">Alumnos</a>
+          <!-- Cursos (disabled) -->
+          <span class="text-gray-300 cursor-not-allowed flex items-center gap-1">
+            Cursos
+            <span class="text-[10px]">(en preparación)</span>
+          </span>
 
-          <a href="#" class="hover:text-gray-900 transition">Mensajes</a>
-          <a href="#" class="hover:text-gray-900 transition">Configuración</a>
+          <!-- Alumnos -->
+          <a href="{% url 'student_list' %}"
+             class="{% if '/students' in request.path %}text-gray-900 font-semibold{% else %}text-gray-500 hover:text-gray-900{% endif %}">
+            Alumnos
+          </a>
+
+          <!-- Mensajes (disabled) -->
+          <span class="text-gray-300 cursor-not-allowed flex items-center gap-1">
+            Mensajes
+            <span class="text-[10px]">(en preparación)</span>
+          </span>
+
+          <!-- Configuración (disabled) -->
+          <span class="text-gray-300 cursor-not-allowed flex items-center gap-1">
+            Configuración
+            <span class="text-[10px]">(en preparación)</span>
+          </span>
 
         </nav>
 
-        <!-- RIGHT: USER AREA -->
+        <!-- USER -->
         <div class="flex items-center gap-4 text-sm">
-
           {% if request.user.is_authenticated %}
 
-            <!-- LINK A ADMIN -->
-            <a href="/admin/" class="text-gray-700 hover:underline">Admin</a>
+            <a href="/admin/" class="text-gray-600 hover:underline">Admin</a>
 
-            <!-- USERNAME -->
             <span class="hidden sm:inline font-medium text-gray-700">
               {{ request.user.username }}
             </span>
 
-            <!-- LOGOUT -->
             <form action="{% url 'logout' %}" method="post">
               {% csrf_token %}
-              <button type="submit"
-                      class="text-red-600 font-semibold hover:underline">
+              <button type="submit" class="text-red-600 font-semibold hover:underline">
                 Cerrar sesión
               </button>
             </form>
 
           {% else %}
-
-            <!-- LOGIN BUTTON -->
             <a href="{% url 'login' %}"
-               class="px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 transition">
+               class="px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-semibold hover:bg-gray-700">
               Iniciar sesión
             </a>
-
           {% endif %}
-
         </div>
 
       </div>
     </header>
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN -->
     <main class="flex-1 w-full">
       <div class="max-w-6xl mx-auto px-5 py-8">
 
-        <!-- PAGE HEADER -->
+        <!-- BREADCRUMB -->
         <div class="mb-6">
-          <p class="text-[11px] tracking-[0.18em] uppercase text-gray-400">
+          <p class="text-[11px] uppercase tracking-[0.18em] text-gray-400">
             {% block breadcrumb %}Panel de control{% endblock %}
           </p>
 
@@ -96,29 +108,27 @@
           </p>
         </div>
 
-        <!-- MESSAGES -->
+        <!-- FLASH MESSAGES -->
         {% if messages %}
           <div class="mb-4 space-y-2">
             {% for message in messages %}
               <div class="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs
-                          {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
-                          {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
-                          {% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800
-                          {% else %}bg-gray-50 border-gray-200 text-gray-700
-                          {% endif %}">
+                {% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800
+                {% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800
+                {% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800
+                {% else %}bg-gray-50 border-gray-200 text-gray-700{% endif %}">
                 <span class="mt-[3px] h-1.5 w-1.5 rounded-full
-                             {% if message.tags == 'success' %}bg-green-500
-                             {% elif message.tags == 'error' %}bg-red-500
-                             {% elif message.tags == 'warning' %}bg-yellow-500
-                             {% else %}bg-gray-400
-                             {% endif %}"></span>
+                  {% if message.tags == 'success' %}bg-green-500
+                  {% elif message.tags == 'error' %}bg-red-500
+                  {% elif message.tags == 'warning' %}bg-yellow-500
+                  {% else %}bg-gray-400{% endif %}"></span>
                 <p>{{ message }}</p>
               </div>
             {% endfor %}
           </div>
         {% endif %}
 
-        <!-- CONTENT BLOCK -->
+        <!-- CONTENT -->
         <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
           {% block content %}{% endblock %}
         </section>
@@ -128,9 +138,24 @@
 
     <!-- FOOTER -->
     <footer class="w-full bg-white border-t border-gray-200">
-      <div class="max-w-6xl mx-auto px-5 py-3 flex flex-col sm:flex-row items-center justify-between text-[11px] text-gray-500 gap-2">
-        <span>© 2025 Segumas · Moodle WhatsApp Notifier · v0.1</span>
-        <span>Construido con Django, Tailwind y APIs Moodle & WhatsApp</span>
+      <div class="max-w-6xl mx-auto px-5 py-4
+                  flex flex-col md:flex-row items-center justify-between
+                  gap-2 text-[11px] text-gray-500">
+
+        <div class="flex flex-col sm:flex-row items-center gap-2">
+          <span class="font-medium text-gray-600">© 2025 Segumas</span>
+          <span class="hidden sm:inline">·</span>
+          <span>Moodle WhatsApp Notifier</span>
+          <span class="hidden sm:inline">·</span>
+          <span class="text-gray-400">v0.1 · uso interno</span>
+        </div>
+
+        <div class="flex items-center gap-4 text-gray-400">
+          <span>Panel interno</span>
+          <span class="hidden sm:inline">·</span>
+          <span>Automatización Moodle & WhatsApp</span>
+        </div>
+
       </div>
     </footer>
 

@@ -32,9 +32,9 @@ def call(function, extra_params=None, method="GET"):
         params.update(extra_params)
 
     if method == "POST":
-        res = requests.post(MOODLE_URL, params=params)
+        res = requests.post(MOODLE_URL, params=params, timeout=20)
     else:
-        res = requests.get(MOODLE_URL, params=params)
+        res = requests.get(MOODLE_URL, params=params, timeout=20)
 
     try:
         return res.json()
