@@ -15,9 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-key")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-# En desarrollo lo dejamos abierto
-ALLOWED_HOSTS = ["*"]  
-# En producción: ALLOWED_HOSTS = ["tu-dominio.com"]
+ALLOWED_HOSTS = ["*"]
 
 
 # ======================
@@ -30,6 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'django_celery_beat',
 
     # Apps del proyecto
@@ -38,6 +37,7 @@ INSTALLED_APPS = [
     'whatsapp_app',
     'notifier',
     'dashboard',
+    'medical_alerts',
 ]
 
 
@@ -68,7 +68,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / "templates",   # carpeta global de templates
+            BASE_DIR / "templates",
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -106,14 +106,8 @@ DATABASES = {
 # ======================
 # AUTH / LOGIN
 # ======================
-
-# Después de login → Admin
 LOGIN_REDIRECT_URL = '/'
-
-# Después de logout → Login
 LOGOUT_REDIRECT_URL = '/login/'
-
-# URL del formulario de login
 LOGIN_URL = 'login'
 
 
@@ -152,6 +146,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # ======================
+# EMAIL (DESARROLLO)
+# ======================
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "no-reply@segumas.local"
+
+
+# ======================
 # MOODLE SETTINGS
 # ======================
 MOODLE_URL = os.getenv("MOODLE_URL")
@@ -169,7 +170,6 @@ WHATSAPP_BUSINESS_ID = os.getenv("WHATSAPP_BUSINESS_ID")
 # ======================
 # CELERY / REDIS
 # ======================
-
 CELERY_BROKER_URL = os.getenv(
     "CELERY_BROKER_URL",
     "redis://localhost:6379/0"
@@ -180,6 +180,4 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 
 CELERY_TIMEZONE = TIME_ZONE
-
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-
