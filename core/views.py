@@ -38,6 +38,7 @@ def moodle_dashboard_view(request):
 # ============================================================
 # LISTA DE ALUMNOS
 # ============================================================
+@login_required
 def student_list_view(request):
     estado = request.GET.get("estado")
     q = (request.GET.get("q") or "").strip()
@@ -84,6 +85,7 @@ def student_list_view(request):
 # ============================================================
 # CREAR ALUMNO (CREA TAMBIÉN USUARIO EN MOODLE)
 # ============================================================
+@login_required
 def create_student_view(request):
     if request.method == "POST":
         form = StudentForm(request.POST)
@@ -117,6 +119,7 @@ def create_student_view(request):
 # ============================================================
 # DETALLE DE ALUMNO
 # ============================================================
+@login_required
 def student_detail_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
@@ -139,6 +142,7 @@ def student_detail_view(request, student_id):
 # ============================================================
 # EDITAR ALUMNO (SINCRONIZA CON MOODLE)
 # ============================================================
+@login_required
 def student_edit_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
@@ -197,6 +201,7 @@ def student_edit_view(request, student_id):
 # ============================================================
 # ELIMINAR ALUMNO (BORRA TAMBIÉN EN MOODLE)
 # ============================================================
+@login_required
 def student_delete_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
@@ -226,6 +231,7 @@ def student_delete_view(request, student_id):
 # ============================================================
 # CREAR USUARIO EN MOODLE (VISTA DEFENSIVA)
 # ============================================================
+@login_required
 def student_create_moodle_user_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
@@ -247,6 +253,7 @@ def student_create_moodle_user_view(request, student_id):
 from whatsapp_app.services.welcome import send_welcome_message
 
 
+@login_required
 def student_assign_course_view(request, student_id):
     student = get_object_or_404(Student, id=student_id)
 
@@ -326,6 +333,7 @@ from django.contrib import messages
 from django.shortcuts import redirect
 
 
+@login_required
 @require_POST
 def sync_courses_view(request):
     from core.tasks import sync_courses_task  # import local (evita ImportError en arranque)

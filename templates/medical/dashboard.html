@@ -7,7 +7,9 @@ Estado general de empleados y reconocimientos médicos.
 
 {% block content %}
 
-<!-- KPIs -->
+<!-- ========================= -->
+<!-- KPIs PRINCIPALES -->
+<!-- ========================= -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
 
   <!-- Empresas -->
@@ -20,7 +22,7 @@ Estado general de empleados y reconocimientos médicos.
     </p>
   </div>
 
-  <!-- Empleados -->
+  <!-- Empleados activos -->
   <div class="rounded-xl border border-gray-200 bg-white p-5">
     <p class="text-xs uppercase tracking-wide text-gray-500">
       Empleados activos
@@ -30,7 +32,7 @@ Estado general de empleados y reconocimientos médicos.
     </p>
   </div>
 
-  <!-- Próx. caducidad -->
+  <!-- Caducan en 15 días -->
   <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-5">
     <p class="text-xs uppercase tracking-wide text-yellow-700">
       Caducan en 15 días
@@ -52,36 +54,53 @@ Estado general de empleados y reconocimientos médicos.
 
 </div>
 
+<!-- ========================= -->
 <!-- BLOQUE INFERIOR -->
+<!-- ========================= -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-  <!-- Últimas alertas enviadas -->
+  <!-- Alertas enviadas (métricas) -->
   <div class="rounded-xl border border-gray-200 bg-white p-6">
-    <h2 class="text-sm font-semibold text-gray-900 mb-3">
-      Últimas alertas enviadas
+    <h2 class="text-sm font-semibold text-gray-900 mb-4">
+      Alertas enviadas
     </h2>
 
-    {% if recent_alerts %}
-      <ul class="divide-y text-sm">
-        {% for alert in recent_alerts %}
-          <li class="py-2 flex justify-between">
-            <span class="text-gray-700">
-              {{ alert.employee.first_name }} {{ alert.employee.last_name }}
-            </span>
-            <span class="text-gray-500 text-xs">
-              {{ alert.created_at|date:"d/m/Y" }}
-            </span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="text-sm text-gray-500">
-        No se han enviado alertas todavía.
-      </p>
-    {% endif %}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+
+      <!-- Hoy -->
+      <div>
+        <p class="text-xs uppercase tracking-wide text-gray-500">
+          Hoy
+        </p>
+        <p class="mt-1 text-3xl font-semibold text-gray-900">
+          {{ alerts_today }}
+        </p>
+      </div>
+
+      <!-- Ayer -->
+      <div>
+        <p class="text-xs uppercase tracking-wide text-gray-500">
+          Ayer
+        </p>
+        <p class="mt-1 text-3xl font-semibold text-gray-900">
+          {{ alerts_yesterday }}
+        </p>
+      </div>
+
+      <!-- Últimos 7 días -->
+      <div>
+        <p class="text-xs uppercase tracking-wide text-gray-500">
+          Últimos 7 días
+        </p>
+        <p class="mt-1 text-3xl font-semibold text-gray-900">
+          {{ alerts_last_7_days }}
+        </p>
+      </div>
+
+    </div>
   </div>
 
-  <!-- Acciones -->
+  <!-- Acciones rápidas -->
   <div class="rounded-xl border border-gray-200 bg-white p-6">
     <h2 class="text-sm font-semibold text-gray-900 mb-3">
       Acciones rápidas

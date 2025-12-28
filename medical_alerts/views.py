@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -18,30 +20,46 @@ def medical_dashboard_view(request):
     company_count = companies.count()
     employee_count = employees.count()
 
+    # Reconocimientos
     expiring_soon_count = sum(
         1 for e in employees if e.days_until_expiry() == 15
     )
-
     expired_count = sum(
         1 for e in employees if e.days_until_expiry() < 0
     )
 
-    recent_alerts = (
-        MedicalAlertLog.objects
-        .select_related("employee")
-        .order_by("-created_at")[:5]
-    )
+    # Alertas por fecha
+    today = timezone.localdate()
+    yesterday = today - timedelta(days=1)
+    last_7_days_start = today - timedelta(days=6)  # incluye hoy
+
+    alerts_today = MedicalAlertLog.objects.filter(
+        created_at__date=today,
+        status="sent",
+    ).count()
+
+    alerts_yesterday = MedicalAlertLog.objects.filter(
+        created_at__date=yesterday,
+        status="sent",
+    ).count()
+
+    alerts_last_7_days = MedicalAlertLog.objects.filter(
+        created_at__date__gte=last_7_days_start,
+        created_at__date__lte=today,
+        status="sent",
+    ).count()
 
     context = {
         "company_count": company_count,
         "employee_count": employee_count,
         "expiring_soon_count": expiring_soon_count,
         "expired_count": expired_count,
-        "recent_alerts": recent_alerts,
+        "alerts_today": alerts_today,
+        "alerts_yesterday": alerts_yesterday,
+        "alerts_last_7_days": alerts_last_7_days,
     }
 
     return render(request, "medical/dashboard.html", context)
-
 
 
 # =====================================================
