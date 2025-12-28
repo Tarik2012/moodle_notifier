@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'notifier',
     'dashboard',
     'medical_alerts',
-]
+    'hub',
+    ]
 
 
 # ======================

@@ -1,78 +1,72 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard · Moodle Notifier{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}Panel principal{% endblock %}
 {% block page_subtitle %}
-Visión general de alumnos, cursos y estado del sistema.
+Selecciona el área de trabajo.
 {% endblock %}
 
 {% block content %}
-  <!-- KPIs -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <!-- Alumnos -->
-    <div class="rounded-xl border border-gray-200 bg-[#FAF9F6] p-4">
-      <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Alumnos registrados</p>
-      <p class="mt-2 text-3xl font-semibold text-gray-900">{{ student_count }}</p>
-      <p class="mt-1 text-xs text-gray-500">Alumnos guardados en la base de datos interna.</p>
-    </div>
 
-    <!-- Cursos -->
-    <div class="rounded-xl border border-gray-200 bg-[#FAF9F6] p-4">
-      <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Cursos sincronizados</p>
-      <p class="mt-2 text-3xl font-semibold text-gray-900">{{ course_count }}</p>
-      <p class="mt-1 text-xs text-gray-500">Cursos importados desde Moodle mediante la API.</p>
-    </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-    <!-- Estado -->
-    <div class="rounded-xl border border-gray-200 bg-[#FAF9F6] p-4">
-      <p class="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Estado del sistema</p>
-      <p class="mt-2 text-sm font-semibold text-emerald-700">En desarrollo · v0.1</p>
-      <p class="mt-1 text-xs text-gray-500">
-        Automatización activa mediante Celery + Redis.
-      </p>
-    </div>
-  </div>
+  <!-- MOODLE -->
+  <a href="{% url 'moodle_dashboard' %}"
+     class="group rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition">
 
-  <!-- Sección inferior -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <!-- Roadmap -->
-    <div class="rounded-xl border border-gray-200 bg-white p-4">
-      <h2 class="text-sm font-semibold text-gray-900 mb-2">Próximas integraciones</h2>
-      <ul class="space-y-1 text-xs text-gray-600">
-        <li>• Actualización periódica del progreso desde Moodle.</li>
-        <li>• Detección de alumnos inactivos.</li>
-        <li>• Envío automático de mensajes por WhatsApp.</li>
-      </ul>
-    </div>
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-gray-400">
+          Formación
+        </p>
+        <h2 class="mt-1 text-lg font-semibold text-gray-900">
+          Moodle
+        </h2>
+      </div>
 
-    <!-- Acciones -->
-    <div class="rounded-xl border border-gray-200 bg-white p-4">
-      <h2 class="text-sm font-semibold text-gray-900 mb-2">Accesos rápidos</h2>
-
-      <div class="flex flex-wrap gap-2 mt-2">
-        <!-- Crear alumno -->
-        <a href="{% url 'student_create' %}"
-           class="inline-flex items-center rounded-lg border border-blue-500 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
-          Crear alumno
-        </a>
-
-        <!-- Sincronizar cursos -->
-        <form method="post" action="{% url 'sync_courses' %}">
-          {% csrf_token %}
-          <button
-            type="submit"
-            class="inline-flex items-center rounded-lg border border-emerald-500 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-          >
-            Sincronizar cursos Moodle
-          </button>
-        </form>
-
-        <!-- Placeholder futuros -->
-        <span
-          class="inline-flex items-center rounded-lg border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-400 cursor-not-allowed">
-          Historial de mensajes (próximamente)
-        </span>
+      <div class="h-12 w-12 rounded-lg bg-blue-50 flex items-center justify-center
+                  text-blue-600 text-xl group-hover:bg-blue-100">
+        📘
       </div>
     </div>
-  </div>
+
+    <p class="mt-4 text-sm text-gray-600">
+      Gestión de alumnos, cursos, matrículas y automatizaciones con Moodle.
+    </p>
+
+    <p class="mt-4 text-xs font-medium text-blue-600">
+      Entrar →
+    </p>
+  </a>
+
+  <!-- SALUD LABORAL -->
+  <a href="{% url 'medical_alerts:medical_dashboard' %}"
+     class="group rounded-xl border border-gray-200 bg-white p-6 hover:shadow-md transition">
+
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-gray-400">
+          Prevención
+        </p>
+        <h2 class="mt-1 text-lg font-semibold text-gray-900">
+          Salud laboral
+        </h2>
+      </div>
+
+      <div class="h-12 w-12 rounded-lg bg-emerald-50 flex items-center justify-center
+                  text-emerald-600 text-xl group-hover:bg-emerald-100">
+        🏥
+      </div>
+    </div>
+
+    <p class="mt-4 text-sm text-gray-600">
+      Control de reconocimientos médicos y alertas automáticas a empresas.
+    </p>
+
+    <p class="mt-4 text-xs font-medium text-emerald-600">
+      Entrar →
+    </p>
+  </a>
+
+</div>
+
 {% endblock %}

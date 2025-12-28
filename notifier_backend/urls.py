@@ -3,14 +3,19 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # Admin Django
+    path("admin/", admin.site.urls),
 
-    # rutas de la app core
-    path('', include('core.urls')),
-    path("medical/", include("medical_alerts.urls")),
+    # HOME GENERAL (hub / shell)
+    path("", include("hub.urls")),   # 👈 entrada al sistema
 
-    # auth
-    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
-    path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
-  
+    # Moodle
+    path("moodle/", include("core.urls")),
+
+    # Salud laboral
+    path("medical/", include("medical_alerts.urls", namespace="medical_alerts")),
+
+    # Auth
+    path("login/", auth_views.LoginView.as_view(template_name="login.html"), name="login"),
+    path("logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
 ]

@@ -31,7 +31,7 @@ class Employee(models.Model):
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
-        related_name="employees"
+        related_name="employees",
     )
 
     first_name = models.CharField(max_length=120)
@@ -61,7 +61,7 @@ class Employee(models.Model):
     def medical_expiry_date(self):
         """
         Fecha en la que caduca el reconocimiento médico.
-        Regla v1: 1 año (365 días) desde la fecha de alta del empleado.
+        Regla v1: 365 días desde la fecha de alta del empleado.
         """
         return self.created_at.date() + timedelta(days=365)
 
@@ -99,17 +99,17 @@ class MedicalAlertLog(models.Model):
     company = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
-        related_name="medical_alert_logs"
+        related_name="medical_alert_logs",
     )
     employee = models.ForeignKey(
         Employee,
         on_delete=models.CASCADE,
-        related_name="medical_alert_logs"
+        related_name="medical_alert_logs",
     )
 
     alert_type = models.CharField(max_length=20, choices=ALERT_TYPE_CHOICES)
 
-    # Fecha de referencia del ciclo médico (expiry_date)
+    # Fecha de referencia del ciclo médico (expiry_date del empleado)
     reference_date = models.DateField()
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES)
@@ -125,6 +125,12 @@ class MedicalAlertLog(models.Model):
         indexes = [
             models.Index(fields=["company", "employee", "alert_type"]),
             models.Index(fields=["created_at"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "employee", "alert_type", "reference_date"],
+                name="uniq_medical_alert_per_employee_date",
+            )
         ]
 
     def __str__(self) -> str:

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Panel principal{% endblock %}
+{% block page_title %}Panel principal{% endblock %}
+{% block page_subtitle %}
+Selecciona el sistema al que deseas acceder
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+  <!-- Moodle -->
+  <a href="{% url 'moodle_dashboard' %}"
+     class="block rounded-xl border border-gray-200 bg-white p-6 hover:shadow">
+    <h2 class="text-lg font-semibold text-gray-900">Moodle</h2>
+    <p class="text-sm text-gray-500 mt-1">
+      Gestión de alumnos, cursos y matrículas
+    </p>
+  </a>
+
+  <!-- Salud laboral -->
+  <a href="{% url 'medical_alerts:medical_dashboard' %}"
+     class="block rounded-xl border border-gray-200 bg-white p-6 hover:shadow">
+    <h2 class="text-lg font-semibold text-gray-900">Salud laboral</h2>
+    <p class="text-sm text-gray-500 mt-1">
+      Reconocimientos médicos y alertas por email
+    </p>
+  </a>
+
+</div>
+{% endblock %}

@@ -1,3 +1,4 @@
+# urls.py
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
@@ -7,14 +8,14 @@ from core import views as core_views
 
 urlpatterns = [
 
-    # ============================
-    # HOME
-    # ============================
-    path("", core_views.home_view, name="home"),
 
+
+
+    # ============================
+    # MOODLE
+    # ============================
+    path("moodle/", core_views.moodle_dashboard_view, name="moodle_dashboard"),
     path("courses/sync/", core_views.sync_courses_view, name="sync_courses"),
-
-
 
     # ============================
     # AUTH
@@ -23,28 +24,22 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
 
     # ============================
-    # ALUMNOS (CRUD)
+    # ALUMNOS
     # ============================
     path("students/", core_views.student_list_view, name="student_list"),
     path("students/create/", core_views.create_student_view, name="student_create"),
-
-    # Detalles
     path("students/<int:student_id>/", core_views.student_detail_view, name="student_detail"),
     path("students/<int:student_id>/edit/", core_views.student_edit_view, name="student_edit"),
     path("students/<int:student_id>/delete/", core_views.student_delete_view, name="student_delete"),
-
-    # Crear usuario en Moodle
     path(
         "students/<int:student_id>/create-moodle-user/",
         core_views.student_create_moodle_user_view,
-        name="student_create_moodle_user"
+        name="student_create_moodle_user",
     ),
-
-    # Asignación de curso (placeholder)
     path(
         "students/<int:student_id>/assign/",
         core_views.student_assign_course_view,
-        name="student_assign_course"
+        name="student_assign_course",
     ),
 
     # ============================

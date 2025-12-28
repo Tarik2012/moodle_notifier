@@ -6,6 +6,7 @@ from django.db.models import Count, Q
 
 from .models import Student, Course, Enrollment
 from .forms import StudentForm
+from django.contrib.auth.decorators import login_required
 
 
 # Moodle API
@@ -20,7 +21,9 @@ from moodle_app.api import (
 # ============================================================
 # DASHBOARD
 # ============================================================
-def home_view(request):
+
+@login_required
+def moodle_dashboard_view(request):
     student_count = Student.objects.count()
     course_count = Course.objects.count()
 
@@ -28,7 +31,8 @@ def home_view(request):
         "student_count": student_count,
         "course_count": course_count,
     }
-    return render(request, "home.html", context)
+
+    return render(request, "moodle/home.html", context)
 
 
 # ============================================================
@@ -328,5 +332,5 @@ def sync_courses_view(request):
 
     sync_courses_task.delay()
     messages.success(request, "Sincronización de cursos desde Moodle lanzada correctamente.")
-    return redirect("home")
+    return redirect("moodle_dashboard")
 

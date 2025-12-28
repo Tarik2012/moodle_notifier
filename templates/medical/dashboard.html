@@ -1,0 +1,109 @@
+{% extends "medical/base_medical.html" %}
+
+{% block page_title %}Dashboard · Salud Laboral{% endblock %}
+{% block page_subtitle %}
+Estado general de empleados y reconocimientos médicos.
+{% endblock %}
+
+{% block content %}
+
+<!-- KPIs -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+
+  <!-- Empresas -->
+  <div class="rounded-xl border border-gray-200 bg-white p-5">
+    <p class="text-xs uppercase tracking-wide text-gray-500">
+      Empresas
+    </p>
+    <p class="mt-2 text-3xl font-semibold text-gray-900">
+      {{ company_count }}
+    </p>
+  </div>
+
+  <!-- Empleados -->
+  <div class="rounded-xl border border-gray-200 bg-white p-5">
+    <p class="text-xs uppercase tracking-wide text-gray-500">
+      Empleados activos
+    </p>
+    <p class="mt-2 text-3xl font-semibold text-gray-900">
+      {{ employee_count }}
+    </p>
+  </div>
+
+  <!-- Próx. caducidad -->
+  <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-5">
+    <p class="text-xs uppercase tracking-wide text-yellow-700">
+      Caducan en 15 días
+    </p>
+    <p class="mt-2 text-3xl font-semibold text-yellow-800">
+      {{ expiring_soon_count }}
+    </p>
+  </div>
+
+  <!-- Caducados -->
+  <div class="rounded-xl border border-red-200 bg-red-50 p-5">
+    <p class="text-xs uppercase tracking-wide text-red-700">
+      Caducados
+    </p>
+    <p class="mt-2 text-3xl font-semibold text-red-800">
+      {{ expired_count }}
+    </p>
+  </div>
+
+</div>
+
+<!-- BLOQUE INFERIOR -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <!-- Últimas alertas enviadas -->
+  <div class="rounded-xl border border-gray-200 bg-white p-6">
+    <h2 class="text-sm font-semibold text-gray-900 mb-3">
+      Últimas alertas enviadas
+    </h2>
+
+    {% if recent_alerts %}
+      <ul class="divide-y text-sm">
+        {% for alert in recent_alerts %}
+          <li class="py-2 flex justify-between">
+            <span class="text-gray-700">
+              {{ alert.employee.first_name }} {{ alert.employee.last_name }}
+            </span>
+            <span class="text-gray-500 text-xs">
+              {{ alert.created_at|date:"d/m/Y" }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-sm text-gray-500">
+        No se han enviado alertas todavía.
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- Acciones -->
+  <div class="rounded-xl border border-gray-200 bg-white p-6">
+    <h2 class="text-sm font-semibold text-gray-900 mb-3">
+      Acciones rápidas
+    </h2>
+
+    <div class="flex flex-wrap gap-3">
+      <a href="{% url 'medical_alerts:company_create' %}"
+         class="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100">
+        Crear empresa
+      </a>
+
+      <a href="{% url 'medical_alerts:employee_create' %}"
+         class="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100">
+        Crear empleado
+      </a>
+
+      <span class="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-400 cursor-not-allowed">
+        Ver caducados (próx.)
+      </span>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

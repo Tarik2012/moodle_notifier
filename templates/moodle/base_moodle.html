@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block topnav %}
+<nav class="flex items-center gap-8 text-sm font-medium">
+
+  <a href="{% url 'moodle_dashboard' %}"
+     class="{% if request.resolver_match.url_name == 'moodle_dashboard' %}
+              text-gray-900 border-b-2 border-gray-900 pb-1
+            {% else %}
+              text-gray-500 hover:text-gray-900
+            {% endif %}">
+    Dashboard
+  </a>
+
+  <a href="{% url 'student_list' %}"
+     class="{% if request.resolver_match.url_name == 'student_list' %}
+              text-gray-900 border-b-2 border-gray-900 pb-1
+            {% else %}
+              text-gray-500 hover:text-gray-900
+            {% endif %}">
+    Alumnos
+  </a>
+
+  <span class="h-4 w-px bg-gray-200"></span>
+
+  <span class="flex items-center gap-1 text-gray-300 cursor-not-allowed">
+    Cursos <span class="text-[10px] uppercase">(próx.)</span>
+  </span>
+
+  <span class="flex items-center gap-1 text-gray-300 cursor-not-allowed">
+    Mensajes <span class="text-[10px] uppercase">(WhatsApp)</span>
+  </span>
+
+</nav>
+{% endblock %}
+
+{% block page_title %}{% endblock %}
+{% block page_subtitle %}{% endblock %}
+
+{% block content %}
+<!-- Aquí se renderiza cada página de Moodle -->
+{% endblock %}

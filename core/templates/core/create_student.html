@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "moodle/base_moodle.html" %}
 
 {% block title %}Crear alumno · Moodle Notifier{% endblock %}
 {% block page_title %}Crear alumno{% endblock %}
@@ -46,7 +46,7 @@ Registra un nuevo alumno en la base interna para poder vincularlo con Moodle y a
     </div>
 
     <div class="flex justify-end gap-2">
-      <a href="{% url 'home' %}"
+      <a href="{% url 'moodle_dashboard' %}"
          class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
         Cancelar
       </a>
