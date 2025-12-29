@@ -1,184 +1,118 @@
-# Moodle WhatsApp Notifier
+# Moodle Notifier · Panel interno Formasur
 
-Sistema interno para automatizar notificaciones por WhatsApp a estudiantes de Moodle, usando Django, Celery, Redis y WhatsApp Cloud API.  
-Diseñado para entornos empresariales con bajo/medio volumen, priorizando fiabilidad, deduplicación y trazabilidad.
+Plataforma interna para:
+- Gestión de alumnos y cursos Moodle
+- Envío automático de mensajes WhatsApp
+- Alertas médicas por caducidad de reconocimientos
+- Paneles de control (Moodle + Salud Laboral)
 
----
-
-## Objetivo del proyecto
-
-- Gestionar alumnos y matrículas desde una app Django propia
-- Integrarse con Moodle para:
-  - Crear usuarios
-  - Matricular alumnos en cursos
-  - Calcular progreso (SCORM)
-- Enviar mensajes automáticos por WhatsApp según reglas de negocio
-- Evitar mensajes duplicados
-- No bloquear la aplicación web
-- Mantener un registro auditable de todos los envíos
+Proyecto desarrollado en Django + Celery + Redis.
+La ejecución periódica de alertas médicas se realiza mediante CRON (no Celery Beat).
 
 ---
 
-## Arquitectura general
+## 1. Requisitos del sistema
 
-Django (web / dominio)  
-│  
-├── Celery (tareas asíncronas)  
-│ ├── Orquestadores (batch)  
-│ └── Tasks por matrícula (aislamiento de fallos)  
-│  
-├── Redis (broker de mensajes)  
-│  
-└── WhatsApp Cloud API (Meta)
+Servidor Linux (Ubuntu recomendado)
 
----
-
-## Principios de diseño
-
-- Django es la fuente de verdad
-- Moodle es un sistema externo secundario
-- WhatsApp no tiene autoreintentos
-- Un intento = un MessageLog
-- Idempotencia basada en base de datos
-- Fallos aislados por matrícula
-- Proyecto interno (no SaaS público)
-
----
-
-## Stack tecnológico
-
-- Python 3.13
-- Django 5.x
+Instalar previamente:
+- Python 3.10+
 - PostgreSQL
-- Celery
 - Redis
-- Docker (previsto para despliegue)
-- WhatsApp Cloud API
-- Moodle Web Services (REST)
-- pytest + pytest-django
+- Git
+- Cron (incluido por defecto en Linux)
 
 ---
 
-## Apps principales
+## 2. Clonar el proyecto
 
-- **core**  
-  Modelos de negocio: Student, Course, Enrollment
-
-- **moodle_app**  
-  Integración con Moodle (usuarios, cursos, progreso SCORM)
-
-- **whatsapp_app**  
-  Envío de mensajes WhatsApp y registro de intentos (MessageLog)
+git clone <REPOSITORIO_GITHUB>
+cd moodle_notifier
 
 ---
 
-## Reglas de mensajería
+## 3. Crear entorno virtual
 
-### 1️ Bienvenida
-
-- Se ejecuta al crear la matrícula
-- Usa `transaction.on_commit`
-- Un mensaje por alumno y curso
-
-### 2️ Progreso
-
-- Progreso entre 1% y 99%
-- Ventana de deduplicación configurable
-- Deduplicación por:
-  - student
-  - course
-  - template
-  - estados `PENDING + SENT`
-
-### 3️ Repaso
-
-- Curso finaliza mañana
-- Progreso ≥ 100%
-- Un solo mensaje
-
-### 4️ Finalización
-
-- Curso finaliza hoy
-- Progreso ≥ 100%
-- Un solo mensaje
+python3 -m venv .venv
+source .venv/bin/activate
 
 ---
 
-## MessageLog
+## 4. Instalar dependencias
 
-Cada intento de envío genera un registro auditable con estado:
-
-- PENDING
-- SENT
-- FAILED
-
-Sirve como fuente de verdad, sistema de deduplicación y auditoría.
+pip install -r requirements.txt
 
 ---
 
-## Celery
+## 5. Variables de entorno (.env)
 
-- Workers ejecutan tareas asíncronas
-- Tareas grandes divididas en dispatcher + task por matrícula
-- Redis como broker
-- Sin Celery Beat por ahora (decisión consciente)
+Crear un archivo .env en la raíz del proyecto:
 
----
+DEBUG=False
+SECRET_KEY=clave-secreta-segura
+ALLOWED_HOSTS=127.0.0.1,localhost,IP_SERVIDOR
 
-## Testing
+DATABASE_URL=postgres://usuario:password@localhost:5432/moodle_notifier
 
-Tests críticos con pytest:
+REDIS_URL=redis://127.0.0.1:6379/0
 
-```bash
-pytest
-```
+MOODLE_API_URL=https://moodle.dominio.com
+MOODLE_API_TOKEN=token_moodle
 
----
-
-## Variables de entorno
-
-```env
-DJANGO_SETTINGS_MODULE=notifier_backend.settings
-WHATSAPP_TOKEN=xxxxxxxx
-WHATSAPP_PHONE_ID=xxxxxxxx
-REDIS_URL=redis://localhost:6379/0
-```
-
-En producción:
-
-- DEBUG=False
-- ALLOWED_HOSTS configurado
-- SECRET_KEY seguro
+WHATSAPP_TOKEN=token_whatsapp
+WHATSAPP_PHONE_ID=id_telefono
 
 ---
 
-## Docker (visión)
+## 6. Migraciones y usuario admin
 
-Despliegue previsto en servidor de empresa con:
-
-- Django
-- Celery worker
-- Redis
-- PostgreSQL
-
-El servidor está siempre encendido; el PC del desarrollador solo accede.
+python manage.py migrate
+python manage.py createsuperuser
 
 ---
 
-## Estado del proyecto
+## 7. Arrancar servicios (modo producción interno)
 
-- Funcional
-- Reglas críticas probadas
-- Deduplicación implementada
-- Riesgos conocidos y aceptados
-- Listo para despliegue interno
+### Django
+python manage.py runserver 0.0.0.0:8000
+
+### Redis
+redis-server
+
+### Celery Worker
+celery -A notifier_backend worker -l info
 
 ---
 
-## Próximos pasos
+## 8. Programación CRON (alertas médicas)
 
-- Dockerización final
-- Checklist de producción
-- Monitorización básica
-- Scheduling (cron / Celery Beat)
-- Backups automáticos
+Las alertas médicas NO usan Celery Beat.
+Se ejecutan una vez al día mediante CRON.
+
+Editar cron:
+crontab -e
+
+Ejemplo (todos los días a las 08:00):
+
+0 8 * * * /ruta/proyecto/.venv/bin/python /ruta/proyecto/manage.py send_medical_alerts >> /var/log/moodle_notifier_cron.log 2>&1
+
+---
+
+## 9. Acceso al sistema
+
+- Panel principal: http://IP_SERVIDOR:8000/
+- Admin Django: http://IP_SERVIDOR:8000/admin/
+
+---
+
+## 10. Notas importantes
+
+- El proyecto está preparado para despliegue interno.
+- Dockerización pendiente (opcional).
+- No usar Celery Beat.
+- Redis y Celery deben permanecer activos.
+- CRON es obligatorio para alertas médicas.
+
+---
+
+Proyecto listo para uso interno en empresa.

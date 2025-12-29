@@ -1,4 +1,5 @@
 from django.test import Client, TestCase, override_settings
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from unittest.mock import patch
 
@@ -17,6 +18,11 @@ TEST_DB_SETTINGS = {
 class StudentIntegrationTests(TestCase):
     def setUp(self):
         self.client = Client()
+        user = get_user_model().objects.create_user(
+            username="testuser",
+            password="pass12345",
+        )
+        self.client.force_login(user)
 
     @patch("core.views.create_user", return_value=None)
     def test_create_student_without_moodle_user_id(self, mock_create_user):
@@ -28,6 +34,7 @@ class StudentIntegrationTests(TestCase):
                 "email": "ana.local@example.com",
                 "phone_number": "600000001",
                 "password": "password123",
+                "password_confirm": "password123",
             },
         )
 
@@ -46,6 +53,7 @@ class StudentIntegrationTests(TestCase):
                 "email": "bea.moodle@example.com",
                 "phone_number": "600000002",
                 "password": "password123",
+                "password_confirm": "password123",
             },
         )
 
